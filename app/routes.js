@@ -6,11 +6,9 @@ let then = require('express-then')
 
 let networks = {
     twitter: {
-        network: {
-            icon: 'facebook',
-            name: 'Facebook',
+            icon: 'twitter',
+            name: 'Twitter',
             class: 'btn-primary'
-        }
     }
 }
 
@@ -41,7 +39,7 @@ module.exports = (app) => {
     })
 
     app.post('/login', passport.authenticate('local', {
-        successRedirect: '/profile',
+        successRedirect: '/timeline',
         failureRedirect: '/login',
         failureFlash: true
     }))
@@ -52,9 +50,11 @@ module.exports = (app) => {
         })
     })
 
-    app.post('/signup', (req, res) => {
-
-    })
+     app.post('/signup', passport.authenticate('local-signup', {
+        successRedirect: '/timeline',
+        failureRedirect: '/signup',
+        failureFlash: true
+    }))
 
     /*
      *  Facebook signin

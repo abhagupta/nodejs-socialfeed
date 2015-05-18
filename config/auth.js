@@ -3,7 +3,7 @@ module.exports = {
     'facebookAuth': {
         consumerKey: '812881395467161',
         consumerSecret: '66168284ca9966a563f5b5e13a5a8e37',
-        callbackURL: 'http://socialfeed.com:8000/auth/facebook/callback'
+        callbackUrl: 'http://socialfeed.com:8000/auth/facebook/callback'
     },
     'googleAuth': {
         'consumerKey': '43531689224-uh9pla3j7vhflsaaabk5gmhi8fb06nto.apps.googleusercontent.com',
