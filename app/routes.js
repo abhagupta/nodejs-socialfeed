@@ -150,7 +150,6 @@ module.exports = (app) => {
                 }
 
             })
-            console.log("MAP RESULTS: " + twitterMapResults)
 
             /*
              * Facebook posts retriv
@@ -165,32 +164,62 @@ module.exports = (app) => {
                 'scope': 'user_about_me, public_profile, user_posts, read_stream'
 
             }
-            FB.api('/me/home', opts, 'get', function(results) {
-                let facebookResults = results.data;
 
-                console.log("Results from facebook: " + JSON.stringify(results))
-                let facebookMapResults = facebookResults.map(post => {
-                    return {
-                        id: post.id,
-                        image: post.picture,
-                        text: post.story,
-                        name: '@' + post.from.name,
-                        date: new Date(post.created_time),
-                        network: networks.facebook
-                    }
+            let response = await new Promise((resolve, reject) => FB.api('/me/home',  resolve))
+            let facebookResults = response.data
 
-                })
+            console.log("BODY ************" + facebookResults)
+            let facebookMapResults = facebookResults.map(post => {
+                return {
+                    id: post.id,
+                    image: post.picture,
+                    text: post.story,
+                    name: '@' + post.from.name,
+                    date: new Date(post.created_time),
+                    network: networks.facebook
+                }
 
-                posts = twitterMapResults.concat(facebookMapResults)
-                posts.sort(function(a, b) {
-                    // Turn your strings into dates, and then subtract them
-                    // to get a value that is either negative, positive, or zero.
-                    return new Date(b.date) - new Date(a.date);
-                })
-                res.render('timeline.ejs', {
-                    posts: posts
-                })
             })
+
+            posts = twitterMapResults.concat(facebookMapResults)
+            posts.sort(function(a, b) {
+                // Turn your strings into dates, and then subtract them
+                // to get a value that is either negative, positive, or zero.
+                return new Date(b.date) - new Date(a.date);
+            })
+            res.render('timeline.ejs', {
+                posts: posts
+            })
+        
+
+            // FB.api('/me/home', opts, 'get', function(results) {
+            //     let facebookResults = results.data;
+
+            //     console.log("Results from facebook: " + JSON.stringify(results))
+            //     let facebookMapResults = facebookResults.map(post => {
+            //         return {
+            //             id: post.id,
+            //             image: post.picture,
+            //             text: post.story,
+            //             name: '@' + post.from.name,
+            //             date: new Date(post.created_time),
+            //             network: networks.facebook
+            //         }
+
+            //     })
+
+            //     posts = twitterMapResults.concat(facebookMapResults)
+            //     posts.sort(function(a, b) {
+            //         // Turn your strings into dates, and then subtract them
+            //         // to get a value that is either negative, positive, or zero.
+            //         return new Date(b.date) - new Date(a.date);
+            //     })
+            //     res.render('timeline.ejs', {
+            //         posts: posts
+            //     })
+            // })
+
+
 
         } catch (e) {
             console.log(e)
