@@ -21,6 +21,8 @@ function useExternalPassportStrategy(OauthStrategy, config, oauthProvider) {
 
     function authCB(req, token, refreshToken, _ignored_, account) {
         // asynchronous verification, for effect...
+
+        console.log("Token :" + token);
         
         let loggedInUser = req.user
         if (!loggedInUser)
