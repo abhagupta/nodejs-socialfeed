@@ -15,9 +15,9 @@
 
     <div class="page-header text-center">
         <h1><span class="fa fa-home"></span> Timeline</h1>
-        <a href="/compose" class="btn btn-default btn-sm">
+       <!--  <a href="/compose" class="btn btn-default btn-sm">
             <i class="fa fa-pencil-square-o"></i>&nbsp;&nbsp;&nbsp;Compose
-        </a>
+        </a> -->
         <a href="/profile" class="btn btn-default btn-sm">Profile</a>
         <a href="/logout" class="btn btn-default btn-sm">Logout</a><br><br>
     </div>
@@ -40,8 +40,8 @@
                     </p>
                 </div>
                 <div class="row _icons">
-                    <i class="fa <%= post.liked ? "fa-thumbs-up" : "fa-thumbs-o-up" %> fa-2x _like" name="like<%= post.id %>"></i> 
-                    <a href="/reply/<%= post.id %>" class="fa fa-reply fa-2x"></a>
+                    <i class="fa <%= post.liked ? "fa-thumbs-up" : "fa-thumbs-o-up" %> fa-2x _like" name="like<%= post.id %>" provider="<%= post.network.icon %>"></i> 
+                    <a href="/reply/<%= post.network.icon %>/<%= post.id %>" class="fa fa-reply fa-2x"></a>
                     <a href="/share/<%= post.id %>" class="fa fa-share-square-o fa-2x"></a>
                 </div>
             </div>
@@ -52,10 +52,6 @@
     <% } %>
 
 
-   
-
-    
-
 </div>
 </body>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
@@ -64,10 +60,11 @@
         $('._like').click(function() {
             var $this = $(this)
             var id = $this.attr('name').replace('like', '')
+            var type = $this.attr('provider')
             $this.toggleClass('fa-thumbs-o-up')
             $this.toggleClass('fa-thumbs-up')
             if ($this.hasClass('fa-thumbs-up')) {
-                $.post('like/' + id)
+                $.post('like/' + type+ '/'+id)
             } else {
                 $.post('unlike/' + id)
             }

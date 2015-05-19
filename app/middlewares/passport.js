@@ -72,7 +72,6 @@ function configure(config) {
 
     passport.deserializeUser(nodeifyit(async(id) => {
         let user = await User.promise.findById(id)
-        console.log('@@@@@@@@@@@@@@@@@@@@@@@' + user.local.email)
         return user
     }))
 

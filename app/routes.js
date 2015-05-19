@@ -21,8 +21,7 @@ let networks = {
 module.exports = (app) => {
     let passport = app.passport
     let twitterConfig = app.config.auth.twitterAuth
-
-    console.log("twitter confi:" + twitterConfig)
+    let facebookConfig = app.config.auth.facebookAuth
 
     app.get('/', (req, res) => res.render('index.ejs'))
 
@@ -57,7 +56,7 @@ module.exports = (app) => {
     })
 
     app.post('/signup', passport.authenticate('local-signup', {
-        successRedirect: '/timeline',
+        successRedirect: '/',
         failureRedirect: '/signup',
         failureFlash: true
     }))
@@ -122,15 +121,19 @@ module.exports = (app) => {
         }))
 
     /*
-     *  Timelines - Twitter
+     *  Timelines 
      */
 
     app.get('/timeline', isLoggedIn, then(async(req, res) => {
+
+        let id = req.user._id;
+        let user = await User.promise.findById(id)
+
         try {
             let twitterClient = new Twitter({
                 consumer_key: twitterConfig.consumerKey,
                 consumer_secret: twitterConfig.consumerSecret,
-                access_token_key: '124222716-FI6q29IRSNc5DSwiCWbgkulfnFnt9LBurWPPxzFq',
+                access_token_key: user.twitter.token,   // '124222716-FI6q29IRSNc5DSwiCWbgkulfnFnt9LBurWPPxzFq',
                 access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
             })
 
@@ -158,22 +161,21 @@ module.exports = (app) => {
 
             FB.setAccessToken('CAALjT7LSQ5kBADnIgV7AQHzHQRE19xr3AzOPmYaxZB63EXhHwtPZC1Gf487r1ntlUuTSJEWKZA9Viu7HIUZBZAvLOQwHHzZCJwL948EHUNgntyCKeWYROPnVRI56vwaHBjXBQfpJ4ZAlhEXOrQ4JsURJVQXHaO8Sda56W2gRxw1RZBo7KLMVg2IKiHUNdxeoiSZBaszrHo9pPKVwO0lDRlEPE');
             var opts = {
-                'appId': '812881395467161',
-                'secret': '66168284ca9966a563f5b5e13a5a8e37',
-                'redirectUri': 'http://socialfeed.com:8000/auth/facebook/callback',
+                'appId':   facebookConfig.consumerKey,  //'812881395467161',
+                'secret':  facebookConfig.consumerSecret ,  ///'66168284ca9966a563f5b5e13a5a8e37',
+                'redirectUri': facebookConfig.callbackUrl , //'http://socialfeed.com:8000/auth/facebook/callback',
                 'scope': 'user_about_me, public_profile, user_posts, read_stream'
 
             }
 
-            let response = await new Promise((resolve, reject) => FB.api('/me/home',  resolve))
+            let response = await new Promise((resolve, reject) => FB.api('/me/home', resolve))
             let facebookResults = response.data
 
-            console.log("BODY ************" + facebookResults)
             let facebookMapResults = facebookResults.map(post => {
                 return {
                     id: post.id,
                     image: post.picture,
-                    text: post.story,
+                    text: post.message,
                     name: '@' + post.from.name,
                     date: new Date(post.created_time),
                     network: networks.facebook
@@ -183,14 +185,12 @@ module.exports = (app) => {
 
             posts = twitterMapResults.concat(facebookMapResults)
             posts.sort(function(a, b) {
-                // Turn your strings into dates, and then subtract them
-                // to get a value that is either negative, positive, or zero.
                 return new Date(b.date) - new Date(a.date);
             })
             res.render('timeline.ejs', {
                 posts: posts
             })
-        
+
 
             // FB.api('/me/home', opts, 'get', function(results) {
             //     let facebookResults = results.data;
@@ -226,54 +226,125 @@ module.exports = (app) => {
         }
     }))
 
-    app.get('/compose', isLoggedIn, (req, res) => {
+    app.get('/compose/:type', isLoggedIn, (req, res) => {
         res.render('compose.ejs', {
-            message: req.flash('error')
+            message: req.flash('error'),
+            type: req.params.type
         })
     })
 
-    app.post('/compose', isLoggedIn, then(async(req, res) => {
+    app.post('/compose/:type', isLoggedIn, then(async(req, res) => {
+        let type = req.params.type
+        let id = req.user._id;
+        let user = await User.promise.findById(id)
+        let status = req.body.text
         try {
-            let twitterClient = new Twitter({
-                consumer_key: twitterConfig.consumerKey,
-                consumer_secret: twitterConfig.consumerSecret,
-                access_token_key: '124222716-FI6q29IRSNc5DSwiCWbgkulfnFnt9LBurWPPxzFq',
-                access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
-            })
+            if (type === 'twitter') {
+                let twitterClient = new Twitter({
+                    consumer_key: twitterConfig.consumerKey,
+                    consumer_secret: twitterConfig.consumerSecret,
+                    access_token_key: user.twitter.token,
+                    access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
+                })
 
-            let status = req.body.text
-            await twitterClient.promise.post('/statuses/update', {
-                status
-            })
-            res.redirect('/timeline')
+
+                await twitterClient.promise.post('/statuses/update', {
+                    status
+                })
+                res.redirect('/timeline')
+            } else if (type === 'facebook') {
+                FB.setAccessToken('CAALjT7LSQ5kBADnIgV7AQHzHQRE19xr3AzOPmYaxZB63EXhHwtPZC1Gf487r1ntlUuTSJEWKZA9Viu7HIUZBZAvLOQwHHzZCJwL948EHUNgntyCKeWYROPnVRI56vwaHBjXBQfpJ4ZAlhEXOrQ4JsURJVQXHaO8Sda56W2gRxw1RZBo7KLMVg2IKiHUNdxeoiSZBaszrHo9pPKVwO0lDRlEPE');
+                var opts = {
+                    'appId': facebookConfig.consumerKey,
+                    'secret': facebookConfig.consumerSecret ,
+                    'redirectUri': facebookConfig.callbackUrl ,
+                    'scope': 'email, publish_actions, user_posts, user_likes, read_stream'
+
+                }
+
+                // let response = await new Promise((resolve, reject) => {
+                //     FB.api('/me/feed?&message=' + status,  'post')
+                //     resolve
+                // })
+                // console.log("RESPONSE FROM FACEBOOK :" + JSON.stringify(response))
+
+
+                FB.api('/me/feed?&message=' + status, 'post', function(result) {
+
+                    if (!result) {
+                        return res.send(500, 'error');
+                    } else if (result.error) {
+                        if (result.error.type == 'OAuthException') {
+                            result.redirectUri = FB.getLoginUrl(opts);
+                        }
+                    }
+                    res.redirect('/timeline')
+                })
+            }
+
         } catch (e) {
             console.log(e)
         }
 
     }))
 
-    app.post('/like/:id', isLoggedIn, then(async(req, res) => {
+    app.post('/like/:type/:id', isLoggedIn, then(async(req, res) => {
+        let type = req.params.type
+        let id = req.params.id
+         let userId = req.user._id;
+        let user = await User.promise.findById(userId)
         try {
-            let twitterClient = new Twitter({
-                consumer_key: twitterConfig.consumerKey,
-                consumer_secret: twitterConfig.consumerSecret,
-                access_token_key: '124222716-FI6q29IRSNc5DSwiCWbgkulfnFnt9LBurWPPxzFq',
-                access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
-            })
+            if (type === 'twitter') {
+                let twitterClient = new Twitter({
+                    consumer_key: twitterConfig.consumerKey,
+                    consumer_secret: twitterConfig.consumerSecret,
+                    access_token_key: user.twitter.token,
+                    access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
+                })
 
+                await twitterClient.promise.post('/favorites/create.json', {
+                    id: id
+                })
 
-            await twitterClient.promise.post('/favorites/create.json', {
-                id: req.params.id
-            })
+                res.end();
+            } else if (type === 'facebook') {
+                FB.setAccessToken('CAALjT7LSQ5kBAOtKDIifZAasZAED5Q579DLV7loKgnTdYEhLWZCASSoByOGVfiU0vK5DVXc3O9h0I8bpNWkPOPIJjOWzmMBQmF1SG0eNwe0zysutBtEI2piUS9ajYlpO7X6OEZBjo6lFH9l5ZCm6UwzvdjAkTwhmRHP9SjB4Vph2NUyDFPf3HKKmQNYLARPutOHqDVQ5ZAZATxsZAruIyA90gvQfORCcxUIZD');
+                var opts = {
+                    
+                    'appId': facebookConfig.consumerKey,
+                    'secret': facebookConfig.consumerSecret ,
+                    'redirectUri': facebookConfig.callbackUrl ,
+                    'scope': 'email, publish_actions, user_posts, user_likes, read_stream'
 
-            res.end();
+                }
+
+                // let response = await new Promise((resolve, reject) => {
+                //     FB.api('/me/feed?&message=' + status,  'post')
+                //     resolve
+                // })
+                // console.log("RESPONSE FROM FACEBOOK :" + JSON.stringify(response))
+
+                id = id.substring(0, id.indexOf("_"))
+                FB.api('/me/' + id + '/likes', 'post', function(result) {
+
+                    if (!result) {
+                        return res.send(500, 'error');
+                    } else if (result.error) {
+                        if (result.error.type == 'OAuthException') {
+                            result.redirectUri = FB.getLoginUrl(opts);
+                        }
+                    }
+                    res.redirect('/timeline')
+                })
+            }
+
         } catch (e) {
             console.log(e)
         }
 
     }))
 
-    app.post('/unlike/:id', isLoggedIn, then(async(req, res) => {
+    app.post('/unlike/:type/:id', isLoggedIn, then(async(req, res) => {
         let twitterClient = new Twitter({
             consumer_key: twitterConfig.consumerKey,
             consumer_secret: twitterConfig.consumerSecret,
@@ -286,134 +357,71 @@ module.exports = (app) => {
         res.end()
     }))
 
-    app.get('/reply/:id', function(req, res) {
+    app.get('/reply/:type/:id', function(req, res) {
+
+
 
         let post = {
             message: req.flash('error'),
             id: req.params.id,
-            image: 'test'
-
+            image: 'test',
+            type: req.params.type
         }
         res.render('reply.ejs', {
             post: post
+            
         });
     })
 
 
-    app.post('/reply/:id', isLoggedIn, then(async(req, res) => {
-
-        let twitterClient = new Twitter({
-            consumer_key: twitterConfig.consumerKey,
-            consumer_secret: twitterConfig.consumerSecret,
-            access_token_key: '124222716-FI6q29IRSNc5DSwiCWbgkulfnFnt9LBurWPPxzFq',
-            access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
-        })
-
+    app.post('/reply/:type/:id', isLoggedIn, then(async(req, res) => {
+        let type = req.params.type
+        let id = req.params.id
         let reply = req.body.reply
-        await twitterClient.promise.post('/statuses/update', {
-            status: reply,
-            in_reply_to_status_id: req.params.id
+        if (type === 'twitter') {
+            let twitterClient = new Twitter({
+                consumer_key: twitterConfig.consumerKey,
+                consumer_secret: twitterConfig.consumerSecret,
+                access_token_key: '124222716-FI6q29IRSNc5DSwiCWbgkulfnFnt9LBurWPPxzFq',
+                access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
+            })
 
-        })
+            
+            await twitterClient.promise.post('/statuses/update', {
+                status: reply,
+                in_reply_to_status_id: req.params.id
+
+            })
+        }else if (type === 'google'){
+             FB.setAccessToken('CAALjT7LSQ5kBAOtKDIifZAasZAED5Q579DLV7loKgnTdYEhLWZCASSoByOGVfiU0vK5DVXc3O9h0I8bpNWkPOPIJjOWzmMBQmF1SG0eNwe0zysutBtEI2piUS9ajYlpO7X6OEZBjo6lFH9l5ZCm6UwzvdjAkTwhmRHP9SjB4Vph2NUyDFPf3HKKmQNYLARPutOHqDVQ5ZAZATxsZAruIyA90gvQfORCcxUIZD');
+                var opts = {
+                    'method': 'POST',
+                    'appId': '812881395467161',
+                    'secret': '66168284ca9966a563f5b5e13a5a8e37',
+                    'redirectUri': 'http://socialfeed.com:8000/auth/facebook/callback',
+                    'scope': 'email, publish_actions, user_posts, user_likes, read_stream'
+
+                }
+                FB.api('/me/' + id + '/comments/message='+reply, 'post', function(result) {
+
+                    if (!result) {
+                        return res.send(500, 'error');
+                    } else if (result.error) {
+                        if (result.error.type == 'OAuthException') {
+                            result.redirectUri = FB.getLoginUrl(opts);
+                            console.log('Redirect Url :' + result.redirectUri);
+                        }
+                    }
+                    console.log("Facebook results for reply : " + JSON.stringify(result))
+                    res.redirect('/timeline')
+                })
+        }
+
         res.redirect('/timeline')
         res.end()
     }))
 
-    /*
-     * Facebook posts and feeds sync
-     */
-
-    // app.use(Facebook.middleware({
-    //     appId: '812881395467161',
-    //     secret: '66168284ca9966a563f5b5e13a5a8e37'
-    // }));
-
-    // app.get('/', Facebook.loginRequired(), function(req, res) {
-    //     req.facebook.api('/me', function(err, user) {
-    //         res.writeHead(200, {
-    //             'Content-Type': 'text/plain'
-    //         });
-    //         res.end('Hello, ' + user.name + '!');
-    //     });
-    // });
-
-    app.get('/feed', isLoggedIn, then(async(req, res) => {
-        console.log("reached here" + req.user);
-
-        let userId = req.user._id
-        console.log('USER ID: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! :' + userId)
-
-        var ObjectId = require('mongoose').Types.ObjectId;
-
-        var query = {
-            "_id": new ObjectId(userId)
-        };
-
-        let dbUser = await User.promise.find({
-            query
-        })
-
-        console.log("Token from DB :" + dbUser)
-
-
-        FB.setAccessToken('CAALjT7LSQ5kBADnIgV7AQHzHQRE19xr3AzOPmYaxZB63EXhHwtPZC1Gf487r1ntlUuTSJEWKZA9Viu7HIUZBZAvLOQwHHzZCJwL948EHUNgntyCKeWYROPnVRI56vwaHBjXBQfpJ4ZAlhEXOrQ4JsURJVQXHaO8Sda56W2gRxw1RZBo7KLMVg2IKiHUNdxeoiSZBaszrHo9pPKVwO0lDRlEPE');
-
-
-        FB.api('/me/posts', 'get', function(result) {
-            var opts = {
-                'appId': '812881395467161',
-                'secret': '66168284ca9966a563f5b5e13a5a8e37',
-                'redirectUri': 'http://socialfeed.com:8000/auth/facebook/callback',
-                'scope': 'user_about_me, public_profile, user_posts, read_stream'
-
-            }
-            if (!result) {
-                return res.send(500, 'error');
-            } else if (result.error) {
-                if (result.error.type == 'OAuthException') {
-                    result.redirectUri = FB.getLoginUrl(opts);
-                    console.log('Redirect Url :' + result.redirectUri);
-                }
-                return res.send(500, result);
-            }
-
-            console.log('Result :' + JSON.stringify(result));
-
-            //let posts =
-
-
-
-            res.send(result);
-        });
-
-    }))
-
+   
 
 
 }
-
-// function getFeed(url){
-//     return new Promise(function(resolve, reject){
-//         FB.setAccessToken('CAALjT7LSQ5kBADnIgV7AQHzHQRE19xr3AzOPmYaxZB63EXhHwtPZC1Gf487r1ntlUuTSJEWKZA9Viu7HIUZBZAvLOQwHHzZCJwL948EHUNgntyCKeWYROPnVRI56vwaHBjXBQfpJ4ZAlhEXOrQ4JsURJVQXHaO8Sda56W2gRxw1RZBo7KLMVg2IKiHUNdxeoiSZBaszrHo9pPKVwO0lDRlEPE');
-//         FB.api('/me/posts', 'get', function(result) {
-//         var opts = {
-//             'appId': '812881395467161',
-//             'secret': '66168284ca9966a563f5b5e13a5a8e37',
-//             'redirectUri': 'http://socialfeed.com:8000/auth/facebook/callback',
-//             'scope': 'user_about_me, public_profile, user_posts, read_stream'
-
-//         }
-//         if (!result) {
-//             return res.send(500, 'error');
-//         } else if (result.error) {
-//             if (result.error.type == 'OAuthException') {
-//                 result.redirectUri = FB.getLoginUrl(opts);
-//                 console.log('Redirect Url :' + result.redirectUri);
-//             }
-
-//         }
-
-//         resolve(result)
-//     });
-//     })
-// }
