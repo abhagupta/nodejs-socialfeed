@@ -134,7 +134,7 @@ module.exports = (app) => {
                 access_token_secret: 'JzLcLET42QHyVUF4pBNoJwOkj8QLM2EJlyvfGGWUCQ3nL',
             })
 
-            let [tweets] =  await twitterClient.promise.get('/statuses/home_timeline')
+            let [tweets] = await twitterClient.promise.get('/statuses/home_timeline')
 
             //console.log("CLass:" + JSON.stringify(tweets))
             let twitterMapResults = tweets.map(tweet => {
@@ -143,6 +143,7 @@ module.exports = (app) => {
                     image: tweet.user.profile_image_url,
                     text: tweet.text,
                     name: '@' + tweet.user.screen_name,
+                    date: new Date(tweet.created_at),
                     liked: tweet.favorited,
                     network: networks.twitter
 
@@ -158,35 +159,38 @@ module.exports = (app) => {
 
             FB.setAccessToken('CAALjT7LSQ5kBADnIgV7AQHzHQRE19xr3AzOPmYaxZB63EXhHwtPZC1Gf487r1ntlUuTSJEWKZA9Viu7HIUZBZAvLOQwHHzZCJwL948EHUNgntyCKeWYROPnVRI56vwaHBjXBQfpJ4ZAlhEXOrQ4JsURJVQXHaO8Sda56W2gRxw1RZBo7KLMVg2IKiHUNdxeoiSZBaszrHo9pPKVwO0lDRlEPE');
             var opts = {
-                    'appId': '812881395467161',
-                    'secret': '66168284ca9966a563f5b5e13a5a8e37',
-                    'redirectUri': 'http://socialfeed.com:8000/auth/facebook/callback',
-                    'scope': 'user_about_me, public_profile, user_posts, read_stream'
+                'appId': '812881395467161',
+                'secret': '66168284ca9966a563f5b5e13a5a8e37',
+                'redirectUri': 'http://socialfeed.com:8000/auth/facebook/callback',
+                'scope': 'user_about_me, public_profile, user_posts, read_stream'
 
-                }
-                FB.api('/me/home', opts, 'get', function(results) {
-                    let facebookResults = results.data;
+            }
+            FB.api('/me/home', opts, 'get', function(results) {
+                let facebookResults = results.data;
 
-                    console.log("Results from facebook: " + JSON.stringify(results))
-                    let facebookMapResults = facebookResults.map(post => {
-                        return {
-                            id: post.id,
-                            text: post.story,
-                            name: '@' + post.from.name,
-                            network: networks.facebook
-                        }
+                console.log("Results from facebook: " + JSON.stringify(results))
+                let facebookMapResults = facebookResults.map(post => {
+                    return {
+                        id: post.id,
+                        image: post.picture,
+                        text: post.story,
+                        name: '@' + post.from.name,
+                        date: new Date(post.created_time),
+                        network: networks.facebook
+                    }
 
-                    })
-                    res.render('timeline.ejs', {
-                        posts: twitterMapResults,
-                        facebookPosts: facebookMapResults
-
-                    })
                 })
-   
-               
-          
 
+                posts = twitterMapResults.concat(facebookMapResults)
+                posts.sort(function(a, b) {
+                    // Turn your strings into dates, and then subtract them
+                    // to get a value that is either negative, positive, or zero.
+                    return new Date(b.date) - new Date(a.date);
+                })
+                res.render('timeline.ejs', {
+                    posts: posts
+                })
+            })
 
         } catch (e) {
             console.log(e)
