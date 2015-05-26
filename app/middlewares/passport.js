@@ -12,7 +12,6 @@ require('songbird')
 
 function useExternalPassportStrategy(OauthStrategy, config, oauthProvider) {
     config.passReqToCallback = true
-    console.log('config: ' + config.username)
 
     passport.use(new OauthStrategy(config, nodeifyit(authCB, {
         spread: true
@@ -21,8 +20,6 @@ function useExternalPassportStrategy(OauthStrategy, config, oauthProvider) {
 
     function authCB(req, token, refreshToken, _ignored_, account) {
         // asynchronous verification, for effect...
-
-        console.log("Token :" + token);
         
         let loggedInUser = req.user
         if (!loggedInUser)
@@ -119,7 +116,6 @@ passport.use(new LocalStrategy({
         let query = {
             'local.email': email
         }
-        console.log("$$$$$$$$$$$$$$$$$" + JSON.stringify(query))
 
         user = await User.promise.findOne({
             query
@@ -214,9 +210,6 @@ passport.use('local-signup', new LocalStrategy({
 }, {
     spread: true
 })))
-
-
-
 
 
 module.exports = {

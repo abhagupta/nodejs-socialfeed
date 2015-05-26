@@ -33,8 +33,6 @@ userSchema.methods.generateHash = async function(password) {
 
 userSchema.methods.validatePassword = async function(password) {
   // throw new Error('Not Implemented.')
-  console.log("comparing passwords ", password + '   ' + this.local.password)
-  console.log("comparing passwords ", password == this.local.password)
   return password == this.local.password
 }
 

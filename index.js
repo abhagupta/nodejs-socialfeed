@@ -18,14 +18,12 @@ const NODE_ENV = process.env.NODE_ENV || 'development'
 let app = express(),
   config = requireDir('./config', {recurse: true}),
   port = process.env.PORT || 8000
-  console.log(NODE_ENV)
 
   app.config = {
   	auth: config.auth[NODE_ENV], 
   	database: config.database[NODE_ENV]
   }
 
-  console.log('app.config.auth' + app.config.auth)
 
 passportMiddleware.configure(app.config.auth)
 app.passport = passportMiddleware.passport
